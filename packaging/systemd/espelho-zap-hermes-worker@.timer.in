@@ -1,0 +1,13 @@
+[Unit]
+Description=Schedule Espelho Zap bounded Telegram pipeline worker (%i)
+
+[Timer]
+Unit=espelho-zap-hermes-worker@%i.service
+OnBootSec=30s
+OnUnitInactiveSec=15s
+RandomizedDelaySec=2s
+Persistent=true
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

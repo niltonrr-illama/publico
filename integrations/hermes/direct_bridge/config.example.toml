@@ -1,0 +1,20 @@
+schema_version = 1
+
+[bridge]
+node = "/usr/bin/node"
+bridge_js = "/opt/espelho-zap/hermes-bridge/bridge.js"
+session_dir = "/var/lib/espelho-zap/default/whatsapp-session"
+spool_file = "/var/lib/espelho-zap/default/observer-spool/messages.jsonl"
+cache_root = "/var/cache/espelho-zap/default"
+lock_file = "/run/espelho-zap-default/observer.lock"
+port = 3011
+mode = "bot"
+dm_policy = "open"
+group_policy = "disabled"
+allowed_users = "*"
+forward_owner_messages = false
+# Configure both paths to enable human replies from mapped Telegram topics.
+# The token file is shared only between the Hermes plugin and this loopback bridge.
+human_outbound_token_file = "/etc/espelho-zap/default-human-outbound.token"
+human_outbound_media_root = "/var/lib/espelho-zap/default/human-outbound-media"
+debug = false

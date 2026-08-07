@@ -1,0 +1,34 @@
+[Unit]
+Description=Espelho Zap fail-closed Hermes post-update guard (%i)
+After=network.target
+
+[Service]
+Type=oneshot
+User=@SERVICE_USER@
+Group=@SERVICE_GROUP@
+UMask=0077
+ExecStart=@PYTHON_BIN@ @UPGRADE_GUARD@ --profile %i --env-file @PROFILE_ENV_FILE@ --profile-config @PROFILE_CONFIG_FILE@ --plugin-file @PLUGIN_FILE@ --marker-file @STARTUP_MARKER_FILE@ --arm-file @ARM_FILE@ --ledger-file @LEDGER_FILE@ --token-file @HUMAN_OUTBOUND_TOKEN_FILE@ @REARM_FLAG@
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectClock=true
+ProtectControlGroups=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectHostname=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadOnlyPaths=@PROFILE_ENV_FILE@ @PROFILE_CONFIG_FILE@ @PLUGIN_FILE@ @STARTUP_MARKER_FILE@ @HUMAN_OUTBOUND_TOKEN_FILE@
+# SQLite mode=ro/query_only may still update WAL shared-memory coordination.
+# Grant the ledger directory only for those SQLite sidecars; the guard never
+# issues a data-changing SQL statement.
+ReadWritePaths=@ARM_PARENT_DIR@ @LEDGER_PARENT_DIR@

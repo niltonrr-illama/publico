@@ -1,0 +1,21 @@
+{
+  "name": "@exampleco/openclaw-espelho-zap-portable",
+  "version": "0.3.1",
+  "private": true,
+  "type": "module",
+  "peerDependencies": {
+    "openclaw": ">=2026.7.1"
+  },
+  "openclaw": {
+    "extensions": ["./dist/index.js"],
+    "compat": {
+      "pluginApi": ">=2026.7.1",
+      "minGatewayVersion": "2026.7.1"
+    },
+    "build": {
+      "openclawVersion": "2026.7.1",
+      "pluginSdkVersion": "2026.7.1"
+    }
+  },
+  "files": ["dist/index.js", "openclaw.plugin.json", "README.md"]
+}

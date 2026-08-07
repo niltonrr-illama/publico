@@ -1,0 +1,8 @@
+{
+  "id": "espelho-zap-portable",
+  "name": "Espelho Zap Portable",
+  "description": "Captures WhatsApp inbound before the agent and optionally routes authorized human Telegram-topic replies through OpenClaw's already-paired WhatsApp channel.",
+  "contracts": {},
+  "activation": {"onStartup": true},
+  "configSchema": {"type": "object", "additionalProperties": false}
+}

@@ -1,0 +1,38 @@
+schema_version = 1
+
+[paths]
+data_dir = "~/.local/share/espelho-zap"
+state_dir = "~/.local/state/espelho-zap"
+ledger_path = "~/.local/share/espelho-zap/mirror.sqlite3"
+minimum_free_bytes = 268435456
+
+[telegram]
+api_base = "https://api.telegram.org"
+token_env = "ESPELHO_ZAP_TELEGRAM_BOT_TOKEN"
+token_file = "~/.config/espelho-zap/telegram.token"
+timeout_seconds = 30
+
+[worker]
+worker_id = ""
+profile_id = "default"
+runtime_lock_seconds = 120
+lease_seconds = 60
+max_attempts = 5
+base_backoff_seconds = 5
+allowed_temp_root = "~/.local/share/espelho-zap/media"
+# Raízes explícitas usadas nos dois sentidos (inbound e outbound). Repita a
+# chave no instalador para cada raiz aprovada, incluindo o cache de imagens do
+# runtime quando houver outbound de foto. Nunca aponte para /tmp ou para um
+# cache amplo; a lista vazia é fail-closed.
+source_media_roots = []
+maximum_spool_bytes = 1073741824
+media_retention_hours = 48
+
+[routing]
+auto_create_direct_contact_topics = true
+auto_create_whatsapp_group_topics = false
+approved_groups_only = true
+telegram_forum_chat_id = ""
+
+[legacy]
+default_chat_id = ""

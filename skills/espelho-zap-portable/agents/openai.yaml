@@ -1,0 +1,4 @@
+interface:
+  display_name: "Espelho Zap Portable"
+  short_description: "Operate the portable WhatsApp mirror safely"
+  default_prompt: "Use $espelho-zap-portable to initialize, diagnose, or operate the portable WhatsApp mirror safely."

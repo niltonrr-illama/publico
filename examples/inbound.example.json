@@ -1,0 +1,12 @@
+{
+  "schema_version": 2,
+  "event_id": "runtime-message-id",
+  "source": "whatsapp",
+  "source_profile_id": "whatsapp-primary",
+  "conversation_id": "runtime-conversation-key",
+  "actor_ref": "runtime-actor-key",
+  "occurred_at": "2026-08-04T12:00:00Z",
+  "privacy_scope": "owner_private",
+  "text": "example inbound text",
+  "media": []
+}

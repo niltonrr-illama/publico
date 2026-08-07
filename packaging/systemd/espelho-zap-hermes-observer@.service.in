@@ -1,0 +1,47 @@
+[Unit]
+Description=Espelho Zap Hermes passive bridge with human topic replies (%i)
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=@SERVICE_USER@
+Group=@SERVICE_GROUP@
+WorkingDirectory=@BRIDGE_ROOT@
+EnvironmentFile=-@OBSERVER_ENV_FILE@
+RuntimeDirectory=espelho-zap-%i
+RuntimeDirectoryMode=0700
+ExecStartPre=@PYTHON_BIN@ @DIRECT_BRIDGE_GUARD@ check @BRIDGE_JS@
+ExecStartPre=@PYTHON_BIN@ @DIRECT_BRIDGE_LAUNCHER@ --config @DIRECT_BRIDGE_CONFIG@ --check
+ExecStart=@PYTHON_BIN@ @DIRECT_BRIDGE_LAUNCHER@ --config @DIRECT_BRIDGE_CONFIG@
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+KillSignal=SIGTERM
+UMask=0077
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectClock=true
+ProtectControlGroups=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectHostname=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadOnlyPaths=@BRIDGE_ROOT@ @DIRECT_BRIDGE_CONFIG@ @HUMAN_OUTBOUND_TOKEN_FILE@
+ReadWritePaths=@SESSION_DIR@ @SPOOL_DIR@ @CACHE_DIR@ @LOCK_DIR@ @HUMAN_OUTBOUND_MEDIA_ROOT@
+
+[Install]
+WantedBy=multi-user.target

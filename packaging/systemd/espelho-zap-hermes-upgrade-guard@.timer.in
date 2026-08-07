@@ -1,0 +1,13 @@
+[Unit]
+Description=Periodic Espelho Zap Hermes post-update guard (%i)
+
+[Timer]
+OnBootSec=90s
+OnUnitActiveSec=60s
+AccuracySec=5s
+RandomizedDelaySec=10s
+Persistent=false
+Unit=espelho-zap-hermes-upgrade-guard@%i.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,13 @@
+[Unit]
+Description=Run Espelho Zap portable worker (%i) periodically
+
+[Timer]
+Unit=espelho-zap@%i.service
+OnBootSec=2min
+OnUnitActiveSec=1min
+RandomizedDelaySec=5s
+Persistent=true
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

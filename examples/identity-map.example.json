@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "mappings": [
+    {
+      "legacy_conversation_id": "legacy-conversation-key",
+      "runtime_conversation_id": "runtime-conversation-key",
+      "runtime_source_profile_id": "whatsapp-primary"
+    }
+  ]
+}

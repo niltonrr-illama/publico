@@ -1,0 +1,46 @@
+[Unit]
+Description=Espelho Zap bounded Telegram pipeline worker (%i)
+After=network-online.target espelho-zap-hermes-observer@%i.service
+Wants=network-online.target
+Requires=espelho-zap-hermes-observer@%i.service
+# A healthy 15-second timer starts this bounded oneshot about eight times in
+# two minutes.  Keep margin for normal jitter while still braking a persistent
+# RestartSec=10s failure loop.
+StartLimitIntervalSec=120
+StartLimitBurst=12
+
+[Service]
+Type=oneshot
+User=@SERVICE_USER@
+Group=@SERVICE_GROUP@
+EnvironmentFile=-@WORKER_ENV_FILE@
+ExecStart=-@ESPELHO_ZAP_BIN@ --config @CONFIG_FILE@ observer-once --bridge-url @BRIDGE_URL@ --privacy-scope @PRIVACY_SCOPE@ --batch-limit 100
+ExecStart=@ESPELHO_ZAP_BIN@ --config @CONFIG_FILE@ worker-drain --max-items 100 --max-seconds 50
+Restart=on-failure
+RestartSec=10s
+TimeoutStartSec=90s
+UMask=0077
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ProtectClock=true
+ProtectControlGroups=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectHostname=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadOnlyPaths=@CONFIG_DIR@
+ReadWritePaths=@DATA_DIR@ @STATE_DIR@ @MEDIA_ROOT@ @SOURCE_MEDIA_ROOTS@
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,13 @@
+name: espelho-zap-portable
+version: 0.3.1
+description: Mirror WhatsApp inbound and transport allowlisted human topic replies without LLM dispatch.
+author: ExampleCo
+kind: standalone
+requires_env:
+  - ESPELHO_ZAP_CLI
+  - ESPELHO_ZAP_CONFIG
+  - ESPELHO_ZAP_SOURCE_PROFILE_ID
+  - ESPELHO_ZAP_HOOK_HEALTH_FILE
+provides_tools: []
+provides_hooks:
+  - pre_gateway_dispatch

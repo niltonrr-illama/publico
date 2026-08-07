@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "espelho-zap-portable"
+version = "0.3.4"
+description = "Portable, durable WhatsApp-to-Telegram mirror primitives and CLI"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [{ name = "private workspace" }]
+dependencies = []
+
+[project.scripts]
+espelho-zap = "espelho_zap.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = true
+
+[tool.pytest.ini_options]
+testpaths = [
+  "tests_core",
+  "tests_consumers",
+  "tests_packaging",
+  "tests",
+  "mirror/tests",
+  "capture_v2/tests",
+]
