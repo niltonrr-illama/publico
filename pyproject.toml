@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "espelho-zap-portable"
-version = "0.3.4"
+version = "0.3.5"
 description = "Portable, durable WhatsApp-to-Telegram mirror primitives and CLI"
 readme = "README.md"
 requires-python = ">=3.11"

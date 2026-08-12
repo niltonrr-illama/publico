@@ -92,6 +92,19 @@ reinicio e compactacao nao apagam o registro de entrega.
 
 ## ARM persistente no Hermes
 
+### Dono do marcador de inicializacao
+
+O plugin e carregado tambem por comandos auxiliares do Hermes. Esses processos
+nao sao donos do marcador: somente o processo do perfil com `gateway run` pode
+grava-lo. A implementacao identifica o perfil por `HERMES_PROFILE` e confere
+`gateway run` no argv do processo; em Linux, `/proc/self/cmdline` e a fonte
+principal. Isso evita que um diagnostico sobrescreva o PID do gateway e cause
+um falso `startup_marker_mismatch` no guard.
+
+Apos qualquer instalacao, upgrade ou restart, rode o guard e valide o marcador
+antes do primeiro canario. Um comando auxiliar nao deve alterar o hash ou o
+mtime do marcador.
+
 Habilitar as variaveis nao basta para autorizar envio. O plugin sempre pode
 inicializar o ledger e publicar seu marcador de startup, mas so aceita,
 prepara ou drena outbound quando `ESPELHO_ZAP_HUMAN_OUTBOUND_ARM_FILE` aponta
