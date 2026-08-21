@@ -1,8 +1,13 @@
 # Public distribution
 
-This repository contains the portable Espelho Zap product only. It does not
-contain real conversations, media, contacts, route maps, ledgers, session
-files, tokens, provider credentials, or runtime state.
+This repository contains the portable Espelho Zap product and independently
+versioned public skills listed in [`skills/README.md`](skills/README.md). It does
+not contain real conversations, media, contacts, route maps, ledgers, session
+files, tokens, provider credentials, API keys, or runtime state.
+
+Each independent skill must keep credentials and state outside Git, document its
+external data boundary, and pass a complete secret/private-path scan before
+publication.
 
 ## Per-operator isolation
 
