@@ -1,0 +1,4 @@
+interface:
+  display_name: "Gemini Video Auditor"
+  short_description: "Converts approved videos into evidence-aware SOPs"
+  default_prompt: "Use $gemini-video-auditor to analyze exactly one approved video with the selected profile, preserve evidence boundaries, and verify remote cleanup."
