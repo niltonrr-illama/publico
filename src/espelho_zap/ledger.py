@@ -1968,7 +1968,6 @@ class MirrorLedger:
             if delivery_state not in {
                 "dead",
                 "blocked",
-                "uncertain",
                 "blocked_no_route",
             }:
                 raise LedgerError("media_purge_not_authorized_for_state")

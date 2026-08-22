@@ -269,6 +269,55 @@ class MediaSpoolTest(unittest.TestCase):
                 self.assertEqual(1, cleaned.media_removed)
                 self.assertFalse(staged_path.exists())
 
+    def test_uncertain_media_cannot_be_purged_before_reconciliation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source_root = root / "source"
+            spool = root / "spool"
+            source_root.mkdir()
+            source = source_root / "photo.jpg"
+            source.write_bytes(b"ambiguous-photo")
+            staged, _ = stage_event_media(
+                event(source, event_id="uncertain-media"),
+                spool_root=spool,
+                source_roots=(source_root,),
+                minimum_free_bytes=1,
+            )
+            with MirrorLedger(root / "mirror.sqlite3") as ledger:
+                ledger.set_route(Route(CONVERSATION, "-100123", "42"))
+                worker = MirrorWorker(
+                    ledger,
+                    RecordingTransport(),
+                    allowed_temp_root=spool,
+                )
+                worker.ingest(staged, now=100)
+                ledger.connection.execute(
+                    "UPDATE mirror_deliveries SET state='uncertain' WHERE event_id=?",
+                    (staged.event_id,),
+                )
+                ledger.connection.commit()
+                with self.assertRaisesRegex(
+                    Exception, "media_purge_not_authorized_for_state"
+                ):
+                    ledger.authorize_media_purge(
+                        staged.event_id,
+                        evidence_ref="outcome-remains-ambiguous",
+                        now=101,
+                    )
+                self.assertTrue(Path(staged.media[0].path).exists())
+                report = ledger.managed_media_report()
+                groups = report["groups"]
+                self.assertIsInstance(groups, list)
+                assert isinstance(groups, list)
+                self.assertEqual("active", groups[0]["media_state"])
+                self.assertEqual("uncertain", groups[0]["owner_state"])
+                self.assertEqual(
+                    0,
+                    ledger.connection.execute(
+                        "SELECT COUNT(*) FROM mirror_media_purge_audit"
+                    ).fetchone()[0],
+                )
+
     def test_pending_media_cannot_be_purged(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
