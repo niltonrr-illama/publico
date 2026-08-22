@@ -111,6 +111,16 @@ authorize an unproved transport or fail silently as a successful upgrade.
 The fixed transport is `http://127.0.0.1:3011/mirror-human-send`. The route is
 chosen from the topic map, never from message content. Text, image, voice,
 audio, video and document are supported. See `../../docs/HUMAN_OUTBOUND.md`.
+
+Before an allowlisted human topic message is handled, the plugin projects up to
+the 200 most recent durable `sent` WhatsApp inbound events for that exact topic
+and the topic's durable human-outbound rows into the Hermes transcript. The
+projection is local, read-only against both Espelho ledgers, idempotent by
+platform message identity, and never dispatches an agent or calls a transport.
+Document context contains only caption/name, kind, MIME, size and hash; local
+paths and extracted document text are excluded. This just-in-time projection
+keeps the forum as a data plane while ensuring the topic session has bounded
+bidirectional context when the owner writes there.
 `human-outbound.env.example` is an inert key/path template; it carries no
 runtime ID, route, token or conversation data.
 

@@ -72,6 +72,7 @@ _MAX_HERMES_MANIFEST_FILES = 4096
 _MAX_HERMES_MANIFEST_BYTES = 64 * 1024 * 1024
 _MAX_HERMES_MANIFEST_FILE_BYTES = 8 * 1024 * 1024
 _MAX_RUNTIME_IDENTITY_BYTES = 256 * 1024 * 1024
+_MAX_TOPIC_CONTEXT_BACKFILL = 200
 
 
 def hook_health() -> dict[str, int]:
@@ -1958,6 +1959,154 @@ def _append_topic_context(
     )
 
 
+def _context_media(value: object) -> list[dict[str, object]]:
+    if not isinstance(value, list):
+        return []
+    result: list[dict[str, object]] = []
+    for item in value[:_MAX_MEDIA]:
+        if not isinstance(item, Mapping):
+            continue
+        raw_path = _text(item.get("path"))
+        file_name = _bounded_file_name("", Path(raw_path).name) if raw_path else ""
+        result.append(
+            {
+                "media_type": _text(item.get("kind") or item.get("media_type")),
+                "mime_type": _text(item.get("mime_type")),
+                "sha256": _text(item.get("sha256")),
+                "size_bytes": int(item.get("size_bytes") or 0),
+                "file_name": file_name,
+            }
+        )
+    return result
+
+
+def _append_observed_context(
+    session_store: object,
+    source: object,
+    *,
+    platform_message_id: str,
+    content: str,
+    timestamp: int,
+    transport_intent: str,
+    media: list[dict[str, object]],
+) -> bool:
+    get_or_create = getattr(session_store, "get_or_create_session", None)
+    has_message = getattr(session_store, "has_platform_message_id", None)
+    append = getattr(session_store, "append_to_transcript", None)
+    if not callable(get_or_create) or not callable(has_message) or not callable(append):
+        raise RuntimeError("session_store_required")
+    entry = get_or_create(source)
+    session_id = _field(entry, "session_id")
+    if not session_id:
+        raise RuntimeError("session_id_required")
+    if has_message(session_id, platform_message_id):
+        return False
+    append(
+        session_id,
+        {
+            "role": "user",
+            "content": content,
+            "platform_message_id": platform_message_id,
+            "observed": True,
+            "timestamp": timestamp,
+            "transport_intent": transport_intent,
+            "media": media,
+        },
+    )
+    return True
+
+
+def _project_topic_context(
+    outbound: _HumanOutboundSettings,
+    session_store: object,
+    source: object,
+    thread_id: str,
+) -> int:
+    """Project recent durable inbound and outbound into one Hermes topic."""
+
+    projected = 0
+    if outbound.mirror_ledger_file is None:
+        raise RuntimeError("human_outbound_mirror_ledger_required")
+    mirror_uri = outbound.mirror_ledger_file.as_uri() + "?mode=ro"
+    mirror = sqlite3.connect(mirror_uri, uri=True, timeout=2.0)
+    mirror.row_factory = sqlite3.Row
+    try:
+        mirror.execute("PRAGMA query_only=ON")
+        rows = mirror.execute(
+            """SELECT e.event_id, e.payload_json, e.captured_at
+               FROM mirror_deliveries d
+               JOIN mirror_events e ON e.event_id = d.event_id
+               WHERE d.target_thread_id = ? AND d.state = 'sent'
+               ORDER BY e.captured_at DESC, e.event_id DESC
+               LIMIT ?""",
+            (thread_id, _MAX_TOPIC_CONTEXT_BACKFILL),
+        ).fetchall()
+    finally:
+        mirror.close()
+    for row in reversed(rows):
+        try:
+            payload = json.loads(str(row["payload_json"]))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, Mapping):
+            continue
+        media = _context_media(payload.get("media"))
+        content = _text(payload.get("context_text") or payload.get("text"))
+        if not content and media:
+            label = media[0]["file_name"] or media[0]["media_type"] or "attachment"
+            content = f"[{media[0]['media_type'] or 'media'}: {label}]"
+        if not content and not media:
+            continue
+        projected += int(
+            _append_observed_context(
+                session_store,
+                source,
+                platform_message_id=f"whatsapp-mirror:{row['event_id']}",
+                content=content,
+                timestamp=int(row["captured_at"]),
+                transport_intent="whatsapp_mirror_inbound",
+                media=media,
+            )
+        )
+
+    outbound_uri = outbound.ledger_file.as_uri() + "?mode=ro"
+    connection = sqlite3.connect(outbound_uri, uri=True, timeout=2.0)
+    connection.row_factory = sqlite3.Row
+    try:
+        connection.execute("PRAGMA query_only=ON")
+        rows = connection.execute(
+            """SELECT telegram_message_id, text, media_json, created_at
+               FROM hermes_human_outbound
+               WHERE telegram_thread_id = ?
+               ORDER BY created_at, request_id
+               LIMIT ?""",
+            (thread_id, _MAX_TOPIC_CONTEXT_BACKFILL),
+        ).fetchall()
+    finally:
+        connection.close()
+    for row in rows:
+        try:
+            raw_media = json.loads(str(row["media_json"]))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            raw_media = []
+        media = _context_media(raw_media)
+        projected += int(
+            _append_observed_context(
+                session_store,
+                source,
+                platform_message_id=(
+                    f"telegram:{_text(_field(source, 'chat_id'))}:"
+                    f"{thread_id}:{row['telegram_message_id']}"
+                ),
+                content=_text(row["text"]),
+                timestamp=int(row["created_at"]),
+                transport_intent="whatsapp_human_outbound",
+                media=media,
+            )
+        )
+    return projected
+
+
 class _BridgeRejected(RuntimeError):
     pass
 
@@ -2435,15 +2584,22 @@ def _build_hook(
                         "action": "skip",
                         "reason": "espelho-zap-human-outbound-not-authorized",
                     }
+                thread_id = _text(_field(source, "thread_id")) or _text(
+                    _field(event, "message_thread_id")
+                )
+                if thread_id:
+                    try:
+                        _project_topic_context(
+                            outbound, session_store, source, thread_id
+                        )
+                    except Exception as exc:
+                        _signal_failure(type(exc).__name__)
                 if not _activate_human_outbound(outbound):
                     return {
                         "action": "skip",
                         "reason": "espelho-zap-human-outbound-disarmed",
                     }
                 try:
-                    thread_id = _text(_field(source, "thread_id")) or _text(
-                        _field(event, "message_thread_id")
-                    )
                     message_id = (
                         _text(_field(source, "message_id"))
                         or _text(_field(event, "message_id"))

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 import hashlib
 import importlib.util
 import json
@@ -1088,6 +1089,112 @@ class HermesPluginContractTest(unittest.TestCase):
             self.assertEqual(module.subprocess.DEVNULL, kwargs["stdout"])
             self.assertEqual(module.subprocess.DEVNULL, kwargs["stderr"])
             self.assertLessEqual(kwargs["timeout"], 15)
+
+    def test_topic_context_projects_inbound_and_backfills_outbound_once(self) -> None:
+        module = load_hermes_module()
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            settings = self._human_outbound_settings(module, root)
+            outbound = settings.human_outbound
+            self.assertIsNotNone(outbound)
+            assert outbound is not None
+            with closing(sqlite3.connect(outbound.mirror_ledger_file)) as connection:
+                connection.executescript(
+                    """CREATE TABLE mirror_events (
+                           event_id TEXT PRIMARY KEY,
+                           payload_json TEXT NOT NULL,
+                           captured_at INTEGER NOT NULL
+                       );
+                       CREATE TABLE mirror_deliveries (
+                           event_id TEXT NOT NULL,
+                           target_thread_id TEXT NOT NULL,
+                           state TEXT NOT NULL
+                       );"""
+                )
+                connection.execute(
+                    "INSERT INTO mirror_events VALUES (?, ?, ?)",
+                    (
+                        "inbound-event-1",
+                        json.dumps(
+                            {
+                                "text": "mensagem recebida",
+                                "context_text": "",
+                                "media": [
+                                    {
+                                        "kind": "document",
+                                        "mime_type": "application/pdf",
+                                        "sha256": "b" * 64,
+                                        "size_bytes": 123,
+                                        "path": "/private/cache/decision.pdf",
+                                    }
+                                ],
+                            }
+                        ),
+                        1_700_000_000,
+                    ),
+                )
+                connection.execute(
+                    "INSERT INTO mirror_deliveries VALUES (?, ?, 'sent')",
+                    ("inbound-event-1", "42"),
+                )
+                connection.commit()
+            self.assertTrue(
+                module._prepare_outbound(
+                    outbound,
+                    request_id="telegram:-100777:42:historical",
+                    message_id="historical",
+                    forum_chat_id="-100777",
+                    thread_id="42",
+                    destination="15550000000@s.whatsapp.net",
+                    text="mensagem enviada antes",
+                    payload_sha256="c" * 64,
+                    media=(),
+                )
+            )
+            store = self._session_store()
+            source = types.SimpleNamespace(
+                platform="telegram",
+                chat_id="-100777",
+                thread_id="42",
+                user_id="owner-1",
+                is_bot=False,
+            )
+            event = types.SimpleNamespace(
+                text="mensagem atual",
+                source=source,
+                message_id="current",
+                media_urls=[],
+                media_types=[],
+                raw_message=types.SimpleNamespace(text="mensagem atual"),
+            )
+            hook = module._build_hook(settings)
+            with patch.object(module, "_submit_human_outbound"):
+                self.assertEqual(
+                    "espelho-zap-human-outbound",
+                    hook(event, object(), store)["reason"],
+                )
+                self.assertEqual(
+                    "espelho-zap-human-outbound-replay-blocked",
+                    hook(event, object(), store)["reason"],
+                )
+            self.assertEqual(3, len(store.rows))
+            identities = {row[1]["platform_message_id"] for row in store.rows}
+            self.assertEqual(
+                {
+                    "whatsapp-mirror:inbound-event-1",
+                    "telegram:-100777:42:historical",
+                    "telegram:-100777:42:current",
+                },
+                identities,
+            )
+            inbound = next(
+                row[1]
+                for row in store.rows
+                if row[1]["platform_message_id"] == "whatsapp-mirror:inbound-event-1"
+            )
+            self.assertEqual("whatsapp_mirror_inbound", inbound["transport_intent"])
+            self.assertEqual("decision.pdf", inbound["media"][0]["file_name"])
+            self.assertNotIn("path", inbound["media"][0])
 
     def test_allowed_topic_text_is_prepared_appended_and_woken_once(self) -> None:
         module = load_hermes_module()
