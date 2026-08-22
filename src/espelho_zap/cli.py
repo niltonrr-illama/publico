@@ -108,7 +108,7 @@ def _package_version() -> str:
     try:
         return metadata.version("espelho-zap-portable")
     except metadata.PackageNotFoundError:
-        return "0.3.1"
+        return "0.3.5"
 
 
 def _core() -> SimpleNamespace:

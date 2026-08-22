@@ -2,7 +2,7 @@
 
 **ID:** PRJ-WHATSAPP-COCKPIT-PORTABLE
 **Tipo:** produto Python instalável + contratos de integração
-**Status:** candidato `0.3.4`; aceite humano bidirecional ainda pendente
+**Status:** candidato `0.3.5`; aceite humano bidirecional ainda pendente
 **Dono:** Operator
 **Dono técnico:** Maintainer / coding assistant
 **Escopo:** captura WhatsApp, espelho Telegram, ledger, projeções e migração

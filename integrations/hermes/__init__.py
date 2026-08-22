@@ -52,7 +52,7 @@ _OUTBOUND_REARM_WATCHERS: dict[
     str, tuple[threading.Thread, threading.Event]
 ] = {}
 _OUTBOUND_REARM_WATCH_INTERVAL_SECONDS = 1.0
-_PLUGIN_VERSION = "0.3.1"
+_PLUGIN_VERSION = "0.3.5"
 _HUMAN_OUTBOUND_ARM_KEYS = frozenset(
     {
         "schema_version",

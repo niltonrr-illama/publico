@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.5 - 2026-08-21
+
+- accepts and regression-tests provider `nativeType=conversation` envelopes so
+  one valid durable item cannot remain permanently malformed;
+- projects bounded, idempotent WhatsApp inbound and human outbound history into
+  the exact Hermes topic transcript without dispatching an agent or transport;
+- keeps document projection metadata-only and excludes local media paths;
+- rejects purge authorization for `uncertain` media until delivery outcome is
+  explicitly reconciled.
+
 ## 0.3.4 - 2026-08-07
 
 - documents the bidirectional media-root contract for Hermes and OpenClaw;
