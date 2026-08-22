@@ -306,6 +306,47 @@ class HermesBridgeObserverTest(unittest.TestCase):
             )
         self.assertEqual(["GET"], [item[0].get_method() for item in bridge.requests])
 
+    def test_conversation_native_envelope_is_persisted_and_acked(self) -> None:
+        bridge = FakeBridge(
+            [
+                message(
+                    "conversation-envelope",
+                    nativeType="conversation",
+                    nativeMetadata={"category": "provider-conversation"},
+                    chatIdAlt="",
+                    senderIdAlt="",
+                    senderName="Contact",
+                    chatName="Contact",
+                    isGroup=False,
+                    fromOwner=False,
+                    mediaType="",
+                    mime="",
+                    fileName="",
+                    mentionedIds=[],
+                    hasQuotedMessage=False,
+                    quotedMessageId=None,
+                    quotedParticipant=None,
+                    quotedRemoteJid=None,
+                    quotedText="",
+                    botIds=[],
+                )
+            ]
+        )
+        with MirrorLedger(self.root / "ledger.sqlite3") as ledger:
+            self.route(ledger)
+            result = self.observer(ledger, bridge).observe_once()
+            self.assertEqual(
+                (1, 1, 0, 0),
+                (result.inserted, result.acked, result.malformed, result.quarantined),
+            )
+            self.assertEqual(
+                1,
+                ledger.connection.execute(
+                    "SELECT COUNT(*) FROM mirror_events"
+                ).fetchone()[0],
+            )
+        self.assertEqual(["GET", "POST"], [item[0].get_method() for item in bridge.requests])
+
     def test_media_replay_acks_from_durable_ledger_after_source_disappears(self) -> None:
         photo = self.source / "photo.jpg"
         photo.write_bytes(b"photo")
