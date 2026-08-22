@@ -762,6 +762,27 @@ class HermesPluginContractTest(unittest.TestCase):
             self.assertRegex(startup["hermes_runtime_fingerprint"], r"^[0-9a-f]{64}$")
             self.assertNotIn("arm_file", startup)
 
+    def test_non_gateway_process_cannot_replace_live_profile_marker(self) -> None:
+        module = load_hermes_module()
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            settings = self._human_outbound_settings(module, root)
+            live_marker = Path(
+                "/home/hermeslab/.hermes/profiles/test-profile/state/startup.json"
+            )
+            with patch.dict(
+                os.environ,
+                {
+                    "ESPELHO_ZAP_HUMAN_OUTBOUND_STARTUP_MARKER": str(live_marker),
+                    "ESPELHO_ZAP_RELEASE_COMMIT": "a" * 40,
+                    "HERMES_PROFILE": "test-profile",
+                },
+                clear=False,
+            ), self.assertRaisesRegex(
+                RuntimeError, "startup_marker_writer_not_gateway"
+            ):
+                module._write_startup_marker(settings)
+
     def test_startup_marker_reports_valid_arm_without_secret_material(self) -> None:
         module = load_hermes_module()
         with tempfile.TemporaryDirectory() as temp:

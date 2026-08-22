@@ -2487,6 +2487,24 @@ def _write_startup_marker(settings: _Settings) -> None:
     release_commit = os.environ.get("ESPELHO_ZAP_RELEASE_COMMIT", "").strip()
     if not path.is_absolute() or not re.fullmatch(r"[0-9a-f]{40}", release_commit):
         raise RuntimeError("human_outbound_startup_marker_invalid")
+    if ".hermes/profiles" in path.as_posix():
+        try:
+            argv = [
+                item.decode(errors="replace")
+                for item in Path("/proc/self/cmdline").read_bytes().split(b"\0")
+                if item
+            ]
+        except OSError:
+            argv = []
+        profile = os.environ.get("HERMES_PROFILE", "").strip()
+        if (
+            "gateway" not in argv
+            or "run" not in argv
+            or "-p" not in argv
+            or not profile
+            or argv[argv.index("-p") + 1 : argv.index("-p") + 2] != [profile]
+        ):
+            raise RuntimeError("startup_marker_writer_not_gateway")
     _ensure_private_directory(path.parent)
     if path.exists() and (path.is_symlink() or not path.is_file()):
         raise RuntimeError("human_outbound_startup_marker_invalid")
