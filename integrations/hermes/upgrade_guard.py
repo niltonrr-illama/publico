@@ -32,6 +32,7 @@ _BRIDGE_HOST = "127.0.0.1"
 _BRIDGE_PORT = 3011
 _BRIDGE_HEALTH_PATH = "/mirror-human-health"
 _MAX_CONTROL_BYTES = 64 * 1024
+_MAX_PROFILE_CONFIG_BYTES = 256 * 1024
 _MARKER_KEYS = frozenset(
     {
         "schema_version",
@@ -270,7 +271,12 @@ def _inline_yaml_list(value: str) -> list[str]:
 
 
 def _plugin_lists(path: Path) -> tuple[list[str], list[str]]:
-    raw, _ = _read_bounded(path, code="profile_config_invalid", private=True)
+    raw, _ = _read_bounded(
+        path,
+        code="profile_config_invalid",
+        private=True,
+        maximum=_MAX_PROFILE_CONFIG_BYTES,
+    )
     try:
         lines = raw.decode("utf-8").splitlines()
     except UnicodeDecodeError:

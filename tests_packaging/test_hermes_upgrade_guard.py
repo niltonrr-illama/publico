@@ -184,6 +184,54 @@ class HermesUpgradeGuardTests(unittest.TestCase):
             self.assertIn("espelho-zap-passive", enabled)
             self.assertEqual([], disabled)
 
+    def test_profile_config_accepts_valid_yaml_larger_than_64_kib(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            profile_config = Path(temporary) / "config.yaml"
+            self._private_text(
+                profile_config,
+                ("# bounded padding\n" * 4_096)
+                + "plugins:\n"
+                + "  enabled: [espelho-zap-portable]\n"
+                + "  disabled: [espelho-zap-passive]\n",
+            )
+            self.assertGreater(profile_config.stat().st_size, 64 * 1024)
+            self.assertLess(
+                profile_config.stat().st_size,
+                upgrade_guard._MAX_PROFILE_CONFIG_BYTES,
+            )
+            self.assertEqual(
+                (["espelho-zap-portable"], ["espelho-zap-passive"]),
+                upgrade_guard._plugin_lists(profile_config),
+            )
+
+    def test_profile_config_above_bound_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            profile_config = Path(temporary) / "config.yaml"
+            self._private_text(
+                profile_config,
+                "#" * (upgrade_guard._MAX_PROFILE_CONFIG_BYTES + 1),
+            )
+            with self.assertRaisesRegex(
+                upgrade_guard.GuardError,
+                "^profile_config_invalid$",
+            ):
+                upgrade_guard._plugin_lists(profile_config)
+
+    def test_invalid_profile_yaml_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            profile_config = Path(temporary) / "config.yaml"
+            self._private_text(
+                profile_config,
+                "plugins:\n"
+                "  enabled: [espelho-zap-portable\n"
+                "  disabled: [espelho-zap-passive]\n",
+            )
+            with self.assertRaisesRegex(
+                upgrade_guard.GuardError,
+                "^profile_plugins_invalid$",
+            ):
+                upgrade_guard._plugin_lists(profile_config)
+
     def test_ledger_requires_quick_check_and_reports_inflight(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
