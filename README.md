@@ -2,7 +2,7 @@
 
 **ID:** PRJ-WHATSAPP-COCKPIT-PORTABLE
 **Tipo:** produto Python instalável + contratos de integração
-**Status:** candidato `0.3.4`; aceite humano bidirecional ainda pendente
+**Status:** candidato `0.3.5`; aceite humano bidirecional ainda pendente
 **Dono:** Operator
 **Dono técnico:** Maintainer / coding assistant
 **Escopo:** captura WhatsApp, espelho Telegram, ledger, projeções e migração
@@ -11,6 +11,22 @@
 **Relacionados:** the product release history in this repository
 **Sensibilidade:** código L1; dados reais permanecem fora do Git
 **Última revisão:** 2026-08-06
+
+## Protecao do marcador Hermes (0.3.5)
+
+O marcador de inicializacao do outbound humano so pode ser escrito pelo
+processo Hermes do perfil que esta executando `gateway run`. Comandos auxiliares
+como `plugins list`, diagnosticos e manutencao carregam o plugin, mas nao podem
+substituir o marcador do gateway vivo. Depois de instalar ou atualizar:
+
+1. reinicie somente o perfil Hermes escolhido;
+2. confirme que o marcador aponta para o PID atual e esta em modo `0600`;
+3. execute o guard de upgrade e confirme `HERMES_UPGRADE_GUARD=PASS`;
+4. so entao aceite o canario humano de outbound.
+
+Se o marcador divergir, o outbound permanece fechado por seguranca. Nao
+reenvie automaticamente uma mensagem que foi bloqueada antes de entrar no
+ledger; faca um novo canario depois que o guard passar.
 
 ## Resultado
 

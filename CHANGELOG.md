@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.5 - 2026-08-12
+
+- prevents auxiliary Hermes CLI/maintenance processes from overwriting the
+  live gateway startup marker;
+- binds marker ownership to `HERMES_PROFILE` plus the exact `gateway run`
+  process, using `/proc/self/cmdline` on Linux and a portable argv fallback;
+- adds a regression test and installation guidance for the resulting
+  `startup_marker_mismatch` false disarm;
+- preserves fail-closed outbound behavior when marker identity is invalid.
+
 ## 0.3.4 - 2026-08-07
 
 - documents the bidirectional media-root contract for Hermes and OpenClaw;

@@ -495,6 +495,12 @@ marker da versão/hash e `hermes_runtime_fingerprint` esperados ligado ao PID at
 `quick_check=ok`, bridge observe-only e single-writer. Uma linha `prepared` pode
 ser preservada/rearmada depois desses gates. Uma linha `sending` apenas adia o
 poll quando o ARM atual já coincide; com ARM incompatível ela falha fechada.
+O plugin grava o startup marker somente no processo Hermes que contém o perfil
+em `HERMES_PROFILE` e os argumentos `gateway run`. Comandos auxiliares, como
+`plugins list` ou diagnósticos, podem carregar o plugin, mas não podem substituir
+o marcador do gateway vivo. Após a instalação, execute um comando auxiliar como
+teste de não-interferência: o hash e o mtime do marker devem permanecer iguais;
+depois execute o guard e confirme `HERMES_UPGRADE_GUARD=PASS` antes do canário.
 Mudança futura de API
 que viole esse gate é falha fechada e exige compatibilidade/canário antes do
 rearme; nunca trate gateway vivo como prova suficiente.

@@ -719,6 +719,7 @@ class HermesPluginContractTest(unittest.TestCase):
                     "ESPELHO_ZAP_CLI": sys.executable,
                     "ESPELHO_ZAP_CONFIG": str(config),
                     "ESPELHO_ZAP_SOURCE_PROFILE_ID": "hermes-main",
+                    "HERMES_PROFILE": "hermes-main",
                     "ESPELHO_ZAP_HOOK_HEALTH_FILE": str(root / "health.json"),
                     "ESPELHO_ZAP_PRIVACY_SCOPE": "owner_private",
                     "ESPELHO_ZAP_MEDIA_ROOTS": "",
@@ -739,6 +740,10 @@ class HermesPluginContractTest(unittest.TestCase):
                 module, "_hermes_runtime_fingerprint", return_value="f" * 64
             ), patch.object(
                 module, "_start_human_outbound_rearm_watcher"
+            ), patch.object(
+                module,
+                "_process_arguments",
+                return_value=("hermes", "-p", "hermes-main", "gateway", "run"),
             ), patch.object(module, "_submit_human_outbound") as submit:
                 module.register(context)
             submit.assert_not_called()
@@ -774,8 +779,13 @@ class HermesPluginContractTest(unittest.TestCase):
                     "ESPELHO_ZAP_RELEASE_COMMIT": (
                         settings.human_outbound.release_commit
                     ),
+                    "HERMES_PROFILE": "hermes-main",
                 },
                 clear=False,
+            ), patch.object(
+                module,
+                "_process_arguments",
+                return_value=("hermes", "-p", "hermes-main", "gateway", "run"),
             ):
                 module._write_startup_marker(settings)
             value = json.loads(marker.read_text(encoding="utf-8"))
@@ -790,6 +800,32 @@ class HermesPluginContractTest(unittest.TestCase):
                 value["hermes_runtime_fingerprint"],
             )
             self.assertNotIn("arm_file", value)
+
+    def test_auxiliary_hermes_process_cannot_replace_gateway_marker(self) -> None:
+        module = load_hermes_module()
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            settings = self._human_outbound_settings(module, root)
+            marker = root / "startup.json"
+            original = b'{"gateway_pid":12345,"sentinel":"live-gateway"}\n'
+            marker.write_bytes(original)
+            with patch.dict(
+                os.environ,
+                {
+                    "ESPELHO_ZAP_HUMAN_OUTBOUND_STARTUP_MARKER": str(marker),
+                    "ESPELHO_ZAP_RELEASE_COMMIT": (
+                        settings.human_outbound.release_commit
+                    ),
+                    "HERMES_PROFILE": "hermes-main",
+                },
+                clear=False,
+            ), patch.object(
+                module,
+                "_process_arguments",
+                return_value=("hermes", "-p", "hermes-main", "skills", "list"),
+            ):
+                module._write_startup_marker(settings)
+            self.assertEqual(original, marker.read_bytes())
 
     def test_register_with_valid_arm_writes_marker_then_drains_prepared_job(self) -> None:
         module = load_hermes_module()
@@ -828,6 +864,7 @@ class HermesPluginContractTest(unittest.TestCase):
                     "ESPELHO_ZAP_RELEASE_COMMIT": (
                         settings.human_outbound.release_commit
                     ),
+                    "HERMES_PROFILE": "hermes-main",
                 },
                 clear=False,
             ), patch.object(
@@ -840,6 +877,10 @@ class HermesPluginContractTest(unittest.TestCase):
                 side_effect=module._drain_human_outbound,
             ), patch.object(
                 module, "_start_human_outbound_rearm_watcher"
+            ), patch.object(
+                module,
+                "_process_arguments",
+                return_value=("hermes", "-p", "hermes-main", "gateway", "run"),
             ):
                 context = Context()
                 module.register(context)

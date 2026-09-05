@@ -2326,6 +2326,43 @@ def _stop_human_outbound_rearm_watcher(
         thread.join(timeout=max(0.0, timeout))
 
 
+def _process_arguments() -> tuple[str, ...]:
+    """Read immutable kernel argv when available, with a portable fallback."""
+
+    try:
+        raw = Path("/proc/self/cmdline").read_bytes()
+        if 0 < len(raw) <= 65536:
+            values = tuple(
+                value.decode("utf-8", errors="replace")
+                for value in raw.split(b"\0")
+                if value
+            )
+            if values:
+                return values
+    except OSError:
+        pass
+    return tuple(str(value) for value in sys.argv)
+
+
+def _is_profile_gateway_process(profile_id: str) -> bool:
+    """Return true only for the Hermes gateway process of this profile."""
+
+    if not profile_id:
+        return False
+    args = _process_arguments()
+    if not any(
+        args[index : index + 2] == ("gateway", "run")
+        for index in range(max(0, len(args) - 1))
+    ):
+        return False
+    return any(
+        args[index] in {"-p", "--profile"}
+        and index + 1 < len(args)
+        and args[index + 1] == profile_id
+        for index in range(len(args))
+    ) or any(value == f"--profile={profile_id}" for value in args)
+
+
 def _write_startup_marker(settings: _Settings) -> None:
     """Prove that the gateway registered this exact plugin generation."""
 
@@ -2333,6 +2370,11 @@ def _write_startup_marker(settings: _Settings) -> None:
         "ESPELHO_ZAP_HUMAN_OUTBOUND_STARTUP_MARKER", ""
     ).strip()
     if not raw_path:
+        return
+    gateway_profile_id = os.environ.get("HERMES_PROFILE", "").strip()
+    if not _is_profile_gateway_process(gateway_profile_id):
+        # Hermes also loads plugins for bounded CLI/maintenance commands. A
+        # short-lived process must never replace the live gateway marker.
         return
     path = Path(raw_path)
     release_commit = os.environ.get("ESPELHO_ZAP_RELEASE_COMMIT", "").strip()
